@@ -1,0 +1,20 @@
+[project]
+name = "jlens"
+version = "0.1.0"
+description = "Reproduction of the J-lens / global-workspace method on Qwen & Gemma (Apple MPS)"
+requires-python = ">=3.11"
+# Intentionally pinned to the already-installed, verified stack. Use the existing
+# interpreter (pyenv 3.11.9) rather than a fresh venv so the verified MPS behavior holds.
+dependencies = [
+    "torch==2.5.1",
+    "transformers==5.13.0",
+    "numpy",
+    "safetensors",
+    "huggingface_hub",
+]
+
+[project.optional-dependencies]
+extras = ["datasets", "matplotlib", "rich"]
+
+[tool.setuptools.packages.find]
+include = ["jlens*"]

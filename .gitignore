@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local tooling / IDE (machine-specific, not published)
+.idea/
+.claude/
+
+# macOS
+.DS_Store
+
+# Cached artifacts / scratch (Jacobian caches live in /tmp; guard against local copies)
+*.pt
+jlens_J_*.pt
