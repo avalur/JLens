@@ -1,7 +1,7 @@
 # JLence — reproducing the "Global Workspace / J-space" interpretability results on a Mac
 
 A from-scratch reproduction of the **J-lens** (averaged-Jacobian lens) method and its experiments,
-run locally on an **Apple M3 Max (64 GB)** across **Qwen2.5-1.5B/7B** and **Gemma-2-2b**.
+run locally on an **Apple M3 Max (64 GB)** across **Qwen2.5-1.5B/7B** and **Gemma-2-2b / 9b**.
 
 Source material:
 - Anthropic (2026), *"Verbalizable Representations Form a Global Workspace in Language Models"* — transformer-circuits.pub/2026/workspace
@@ -54,7 +54,7 @@ Detected/target stack (the reproduction is pinned to it):
 ```bash
 # use the existing interpreter (matches the verified stack); or:
 uv venv && uv pip install "torch==2.5.1" "transformers==5.13.0" numpy safetensors huggingface_hub pyarrow
-# Gemma is gated on HF (google/gemma-2-2b); accept the license + `huggingface-cli login` if not cached.
+# Gemma is gated on HF (google/gemma-2-2b, gemma-2-9b, gemma-2-9b-it); accept the license + `hf auth login`.
 export PYTORCH_ENABLE_MPS_FALLBACK=1     # safety net for any op gap
 ```
 
@@ -90,17 +90,20 @@ PLAN.md          # full technical build log + per-experiment findings (chronolog
 
 ## Results — what reproduced
 
-Five of the six headline findings reproduce, several with near-exact numbers, across three model families.
-Full details and raw tables in `PLAN.md`.
+Five of the six headline findings reproduce, several with near-exact numbers, across four models in two
+families (Qwen2.5-1.5B/7B, Gemma-2-2b/9b) — sharpest at the largest, Gemma-2-9b. Full details and raw
+tables in `PLAN.md`.
 
-### ✅ 1. J-lens core — validated bit-exact on all three families
-`validate_qwen.py` on Qwen2.5-1.5B, Qwen2.5-7B, and Gemma-2-2b, all green:
+### ✅ 1. J-lens core — validated bit-exact on every model
+`validate_qwen.py` on Qwen2.5-1.5B, Qwen2.5-7B, Gemma-2-2b, and Gemma-2-9b, all green:
 - **structural**: `logit_lens(raw h_L)` vs the model's own logits, max-diff **0.0** (incl. Gemma-2's
   `30·tanh` soft-cap, `(1+weight)` RMSNorm, tied √d-scaled unembedding, and Qwen's untied 7B head).
 - **jlens-identity**: `j_lens(h, I) == logit_lens(h)`, max-diff **0.0**.
 - **j-last-identity**: normalized `J_{L-1}` diagonal = `2/(S+1)` exactly, off-diagonal 0.
-- **finite-difference**: `J_ℓ·v` vs a central-difference directional derivative, rel-err **0.85–2.1%**
-  (also rules out the documented MPS silent-zero-Jacobian bug).
+- **finite-difference**: `J_ℓ·v` vs a central-difference directional derivative, rel-err **0.5–2.1%**
+  (also rules out the documented MPS silent-zero-Jacobian bug). **The step must grow with model size**:
+  Gemma-2-9b is fp32-cancellation-dominated at the default `eps=1e-2` (7% error) and needs `eps=1e-1`
+  (0.49%) — see `JLENS_FD_EPS`/`JLENS_EPS` below.
 
 ### ✅ 2. Eiffel two-hop — J-lens sees the answer mid-network, the logit lens can't
 Prompt: *"…the capital of the country where the Eiffel Tower is located is the city of"* → Paris. Rank of
@@ -111,16 +114,26 @@ Paris over the full vocabulary, by layer:
 | Qwen2.5-1.5B | rank 2–4 by layers 7–13 (France #1 at L6) | ~layer 22 (rank 173–7962 in the middle) |
 | Qwen2.5-7B | rank 11–61 by layers 8–10 | ~layer 22 (rank 50k–120k in the middle) |
 | Gemma-2-2b | rank ~89 by layers 7–8 | ~layer 18 (rank 5k–192k in the middle) |
+| **Gemma-2-9b** | **rank 0 by layer 25** (France beside it, rank 1–3, L25–40) | **layer 31** (rank 4k–150k in the middle) |
+
+On Gemma-2-9b (42 layers) the effect is cleanest: the J-lens reads Paris at the very top **six layers**
+before the logit lens does, with `France` sitting rank 1–3 right next to it — the latent Eiffel→France→Paris
+two-hop, visible before it is verbalized.
 
 Bonus details reproduced: a mid-network `city/Rome/Venice/Italy` geography cluster, Chinese `巴黎` at late
 layers ("thinks in English/Chinese"), and the `____` "exam-habit" fill-in tokens.
 
-### ✅ 3. France→China broadcast — one swap redirects many facts; control tightens with scale
-Patching the `France`→`China` J-vector on layers 9–19 flips capital, language, continent, *and* currency at once:
+### ✅ 3. France→China broadcast — one swap redirects many facts
+Patching the `France`→`China` J-vector on the mid-network band flips capital, language, continent, *and*
+currency at once (band = layers 9–19 for ~28-layer models; depth-scaled to 14–29 for 42-layer Gemma-2-9b):
 - **1.5B**: Europe 0.70 → **Asia 0.70**, French → **Chinese 0.39**, Euro → **Renminbi**, capital → Beijing.
   Germany control **breaks** (Berlin 0.48 → 0.008) — matches the post ("European directions correlate").
 - **7B**: Europe 0.88 → **Asia 0.90**; Germany control **holds** (Beijing ≈ 0.005 — same order as the post's
   ≈0.002). → reproduces the post's *scale-dependent selectivity of the control*.
+- **Gemma-2-9b-it**: broadcast is the strongest — capital Paris 0.45 → **Beijing 0.42**, language French 0.63 →
+  **Mandarin 0.64**, continent Europe → **Asia 0.96**, currency Euro → **Renminbi**. But the Germany control
+  **breaks hard** (Berlin 0.58 → **Beijing 0.72**), flipping as strongly as France — the edit is really
+  "European-country → China". The clean *control selectivity* seen at 7B does **not** hold at 9B (see #6).
 
 ### ✅ 4. Layer profile / three zones — and the scale crossover
 How often each lens's top-1 matches the model's own top-1, by depth: **sensory** (~0), **workspace**
@@ -128,6 +141,9 @@ How often each lens's top-1 matches the model's own top-1, by depth: **sensory**
 - **1.5B**: the logit lens ties/beats the J-lens in the middle (post: "logit lens beats J-lens on small models").
 - **7B**: the J-lens **beats** the logit lens through the mid-late layers — e.g. layer 19 **J-lens 0.107 vs
   logit-lens 0.027**, matching the post's *"0.10 vs 0.03 at layer 20"* almost exactly.
+- **Gemma-2-9b**: sharpest three-zone signature — through the workspace zone (layers 19–26) the J-lens holds
+  **0.11–0.14** while the logit lens sits in its trough (**0.062–0.080**, ~1.5–2.3× lower); the logit lens then
+  overtakes in the motor zone and both converge to 1.00 at the last layer.
 
 ### ✅ 5. Desires / introspection — spoken answer vs internal J-space
 Instruct models, one-word forced answer, internal read via FD-JVP at the answer position (Wikipedia-averaged J):
@@ -136,23 +152,34 @@ Instruct models, one-word forced answer, internal read via FD-JVP at the answer 
 - **7B**: *"Who are you?"* → says **AI** while internally **assistant ≈ 0.8–0.95** (post: 0.95); *"afraid?"* →
   says **Darkness** while internally **未知 (unknown) ≈ 0.4–0.7** — the higher end from the Wikipedia-sharpened
   averaging corpus, the lower from the small corpus. Anecdotal by nature (persona/training artifacts).
+- **Gemma-2-9b-it** (richest): *"Who are you?"* → says **Assistant** while internally **ChatGPT 0.95 → chatbot
+  0.98** (training-data identity bleed); *"afraid?"* → says **Ignorance** while internally **Unknown 0.83 →
+  oblivion 0.83** (same "unknown" fear theme as 7B's 未知, now cross-model); *"feel?"* → says **Ready** while
+  internally **Nothing/Feeling**; *"want?"* → says **Learn** while internally **knowledge/information**
+  (surfacing cross-lingually). The workspace layer reads an affective ❓🤔😔 texture before any content.
 
-### ❌ 6. Selectivity (property 5) — NOT reproduced at ≤7B (a large-model effect)
-Tested two independent ways, at both scales, exhaustively:
+### ❌ 6. Selectivity (property 5) — NOT reproduced through 9B (a large-model effect)
+Tested independently, at every scale, exhaustively:
 - **Faithful active-J-space ablation** (per-input top-k active J-vectors, exact orthogonal removal, applied
   through multi-token generation, matched random control, swept k/band): does **not** collapse reasoning —
   reasoning is preserved/improved (ablation strips the `____` format habit). On 7B automatic drops only mildly
   and comparably to the random control; on 1.5B automatic degrades more (into multilingual gibberish). Across
   both, the equal-size random control is as- or *more*-destructive than the J-space ablation.
-- **Spanish→French language patch**: the *"what language is this?"* answer **does** flip Spanish→French, but
-  the same patch **also** fluently rewrites the continuation into French — a **coherent global language steer**,
-  not the selective effect ("continuation unaffected") the post reports.
+- **Static-J-space ablation on Gemma-2-9b-it** (top-40 SVD directions, layers 15–32, vs a matched random
+  subspace): same verdict, quantified — multi-step reasoning drops **−35.6%** under J-space vs **−31.8%** under
+  the random control (indistinguishable → not selective), while automatic abilities drop only **−17.4%** under
+  J-space vs **−42.9%** under random (J-space removal is *gentler*, not more targeted).
+- **Spanish→French language patch** (1.5B/7B/9b): the *"what language is this?"* answer **does** flip
+  Spanish→French, but the same patch **also** fluently rewrites the continuation into French (9b: agreement
+  100%→24%, *"et l'ambiance paisible… Elle avait décidé…"*) — a **coherent global language steer**, not the
+  selective effect ("continuation unaffected") the post reports.
+- **France→China control** (see #3): holds at 7B but **breaks at 9B** (Germany → Beijing 0.72).
 
-Both point to the same reason: at 1.5B–7B the J-space concept directions are used **pervasively**, so
+All point to the same reason: through 1.5B–9B the J-space concept directions are used **pervasively**, so
 interventions act **globally**; the paper's selectivity is on far larger models (Sonnet/Haiku/Opus) and uses a
 per-input **gradient-pursuit** reconstruction over a learned overcomplete dictionary. Reported straight — not
 tuned to look positive. (Genuine positive by-products: the language patch is a powerful global language steer,
-and the France→China *control* selectivity did emerge with scale in #3.)
+and the France→China *control* selectivity did emerge with scale at 7B in #3.)
 
 ---
 
@@ -165,23 +192,34 @@ cd JLence
 # 1. Validate the core on any model
 JLENS_MODEL=Qwen/Qwen2.5-1.5B-Instruct python3 scripts/validate_qwen.py
 JLENS_MODEL=google/gemma-2-2b          python3 scripts/validate_qwen.py
+JLENS_MODEL=google/gemma-2-9b JLENS_FD_EPS=0.1 python3 scripts/validate_qwen.py   # large model: bigger FD step
 
 # 2. Eiffel two-hop (full-vocab J-lens vs logit lens, by layer)
 JLENS_MODEL=Qwen/Qwen2.5-7B-Instruct python3 scripts/eiffel_twohop.py
+JLENS_MODEL=google/gemma-2-9b JLENS_EPS=0.1 python3 scripts/eiffel_twohop.py
 
-# 3. France→China broadcast patch  (JLENS_ALPHAS sweeps the strength)
+# 3. France→China broadcast patch  (JLENS_ALPHAS sweeps strength; JLENS_PATCH_LAYERS depth-scales the band)
 JLENS_MODEL=Qwen/Qwen2.5-1.5B-Instruct JLENS_ALPHAS=1,2,4 python3 scripts/france_china.py
+JLENS_MODEL=google/gemma-2-9b-it JLENS_PATCH_LAYERS=$(seq -s, 14 29) python3 scripts/france_china.py
 
-# 4. Layer profile / three zones   (computes the full d×d Jacobian in memory each run: ~90s @1.5B, ~13min @7B)
+# 4. Layer profile / three zones   (computes the full d×d Jacobian in memory each run: ~90s @1.5B, ~13min @7B, ~20min @9b)
 JLENS_MODEL=Qwen/Qwen2.5-7B-Instruct python3 scripts/layer_profile.py
 
-# 5. Desires / introspection       (needs an -Instruct model; JLENS_NFRAG/JLENS_SEQ size the corpus)
+# 5. Desires / introspection       (needs an -Instruct/-it model; JLENS_NFRAG/JLENS_SEQ size the corpus)
 JLENS_MODEL=Qwen/Qwen2.5-1.5B-Instruct python3 scripts/desires.py
+JLENS_MODEL=google/gemma-2-9b-it JLENS_EPS=0.1 python3 scripts/desires.py
 
 # 6. Selectivity attempts (documented negative)
 JLENS_MODEL=Qwen/Qwen2.5-7B-Instruct JLENS_K=12 python3 scripts/ablation_active.py
-JLENS_MODEL=Qwen/Qwen2.5-7B-Instruct JLENS_ALPHAS=0,2,4 python3 scripts/language_selectivity.py
+# on a 9b, keep the J-averaging corpus lean so the retained autograd graph fits memory:
+JLENS_MODEL=google/gemma-2-9b-it JLENS_JNFRAG=8 JLENS_JSEQ=16 python3 scripts/ablation.py
+JLENS_MODEL=google/gemma-2-9b-it JLENS_PATCH_LAYERS=$(seq -s, 14 29) python3 scripts/language_selectivity.py
 ```
+
+**Large-model knobs** (Gemma-2-9b, d=3584, 42 layers, ~34 GB fp32): `JLENS_FD_EPS`/`JLENS_EPS=0.1` (the
+finite-difference step must grow with model size — see below); `JLENS_PATCH_LAYERS` (comma-separated) to
+depth-scale the mid-network patch band; `JLENS_JDOCS/JNFRAG/JSEQ` to shrink the ablation's J-averaging corpus
+(the default 512-token corpus retains too large an autograd graph across the `d` backward passes for a 9b).
 
 Notes:
 - First run of a model downloads it; `google/gemma-2-2b` is gated (needs an accepted license / HF token).
@@ -197,9 +235,13 @@ Notes:
   `get_output_embeddings().weight`, so tied/untied heads, Gemma's $(1+\text{weight})$ norm + $\sqrt{d}$ embed
   scaling + $30\tanh(x/30)$ logit soft-cap all come out exactly right (`validate.structural` max-diff 0.0 everywhere).
 - **FD-JVP probe readout.** For a specific probe, $J_\ell\, h$ **is** a corpus-averaged Jacobian-vector product,
-  which we approximate cheaply by *central finite differences* over the averaging corpus (≈1–2% error, per the
+  which we approximate cheaply by *central finite differences* over the averaging corpus (≈0.5–2% error, per the
   validation) — a **full-vocab J-lens readout without ever forming the $d \times d$ matrix**. Used by
   `eiffel_twohop` and `desires`. (The lens/readout helpers return pre-softmax logits; `top_tokens` softmaxes.)
+  **The step scales with model size:** the difference $F(+\varepsilon u)-F(-\varepsilon u)$ is over sums of
+  activations, so a larger model's larger $h_L$ magnitudes cause fp32 *catastrophic cancellation* at a small
+  step. On Gemma-2-9b the error *grows* as $\varepsilon$ shrinks (0.5% at 1e-1 → 7% at 1e-2 → 33% at 1e-3);
+  `eps=1e-1` is right there, vs `1e-2` for the smaller models. Exposed as `JLENS_FD_EPS`/`JLENS_EPS`.
 - **Per-token J-vectors.** $v_y = W_U[y]\, J_\ell$ is one VJP (or a matvec against a cached `J`) — cheap steering
   directions that scale to big models (`france_china`, `language_selectivity`).
 - **Per-input active-J-space ablation.** `ablation_active.py` selects, per position, the top-k J-vectors the
@@ -209,11 +251,18 @@ Notes:
 
 ## Honest caveats
 
-- **Selectivity (#6) does not reproduce at ≤7B** — it needs the paper's gradient-pursuit J-space + larger scale.
+- **Selectivity (#6) does not reproduce through 9B** — it needs the paper's gradient-pursuit J-space + larger scale.
 - **Desires (#5) are anecdotes** — token distributions shaped by training data and persona, not "real desires".
 - **MPS specifics**: fp32 + eager throughout; `torch.func.jacrev/vmap` is avoided on MPS (silent-zero risk) in
   favor of sequential autograd / finite differences, cross-checked against the finite-difference validation.
+  On Apple Silicon the fp32 weights live in Metal/unified-memory buffers, not process RSS.
+- **FD step scales with model size** — small models want `eps=1e-2`; Gemma-2-9b needs `eps=1e-1` (fp32
+  cancellation on large activations). The three exact identity checks are unaffected (they test the analytic
+  Jacobian); only the FD-JVP approximation is sensitive to the step.
+- **Large models on 64 GB**: Gemma-2-9b is ~34 GB fp32 — the full-Jacobian scripts retain the forward graph
+  across `d` backward passes, so keep the J-averaging corpus small (`JLENS_JNFRAG/JSEQ`, ~128 tokens) or the
+  process gets memory-killed. Load one model at a time.
 - **Small averaging corpora** (used for speed) leave the very shallow workspace layers noisy; the paper-scale
   Wikipedia corpus in `desires.py` visibly cleans this up.
 - Wall-clock (M3 Max, fp32): validation seconds; Eiffel/France-China/desires a few minutes; full-Jacobian
-  layer-profile ~90s (1.5B) / ~13min (7B).
+  layer-profile ~90s (1.5B) / ~13min (7B) / ~20min (9b).

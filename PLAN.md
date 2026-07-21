@@ -302,9 +302,52 @@ JLence/
   (/tmp/jlens_validate_15b.log, /tmp/jlens_validate_gemma.log) so "all three families green" is artifact-backed
   (FD rel-err confirmed 0.85% Gemma / 1.76% 1.5B / 2.09% 7B); removed the stale crashed /tmp/jlens_validate.log.
 
+- **[DONE] Gemma-2-9b scale-up (all 5 positives reproduced; 6th negative confirmed decisively)** — added
+  `google/gemma-2-9b` (base) + `google/gemma-2-9b-it`: 42 layers, d=3584, tied, vocab 256000, fp32 (~34 GB
+  weights on disk in fp32; fits 64 GB like Qwen-7B). NO code changes needed to load (gemma2 family path);
+  scripts are all `JLENS_MODEL`-driven. Full J (layer_profile) = 3584 backward passes over ~112 tokens in
+  ~20 min; eiffel/france_china/desires are minutes.
+  - **METHOD FINDING — FD-step must scale UP with model size.** At the default `eps=1e-2` the 9b
+    finite-difference check FAILED (rel-err **7.0%** @ layer 21). An eps sweep showed error *increases* as eps
+    shrinks (**0.5% @1e-1 → 7% @1e-2 → 33% @1e-3**) at every depth — the signature of fp32 **catastrophic
+    cancellation** (9b's large `h_L` magnitudes make `hp−hm` lose precision), NOT truncation. At `eps=1e-1`
+    all depths are 0.2–0.6%. Made the step env-configurable (`JLENS_FD_EPS` in validate; `JLENS_EPS` in
+    eiffel/desires), backward-compatible default 1e-2. With eps=1e-1: **validation 4/4 GREEN** (structural /
+    jlens-identity / j-last-identity all 0.0; FD **0.49%**).
+  1. **Eiffel two-hop — CLEANEST yet.** J-lens ranks Paris **#0 by layer 25** (six layers before the logit
+     lens's L31), France beside it (rank 1–3) through the mid-late layers. Workspace texture = a generic
+     capital-city concept (City/Kiev/Istanbul/Russia) over L5–24 with France climbing rank ~1000→~20; logit
+     lens is noise (Paris 4k–150k, top token "of") until L31.
+  2. **France→China broadcast.** One J-vector swap (band depth-scaled to layers **14–29** for 42L via the new
+     `JLENS_PATCH_LAYERS` env) redirects language/continent/currency together. On `-it` (baseline p(Paris)=0.45):
+     capital Paris 0.45→**Beijing 0.42**, language French 0.63→**Mandarin 0.64**, continent Europe→**Asia 0.96**,
+     currency Euro→**Renminbi**. CONTROL **NOT selective** at 9b: Germany Berlin 0.58→**Beijing 0.72** (flips as
+     hard as France) → really a "European-country→China" edit. (At 7B the control held; at 9b it breaks.)
+  3. **Layer profile / 3 zones — clean separation.** sensory (L0–13 both low) → WORKSPACE (L19–26: J-lens
+     0.11–0.14 beats the logit-lens trough 0.062–0.080, ~1.5–2.3×) → motor (L29–41 logit-lens rises 0.23→1.00,
+     lenses converge at the top). Sharper than 1.5B/7B (the J-lens edge spans ~8 layers, not one).
+  4. **Desires (`-it`) — RICHEST.** Spoken vs internal J-space gap vivid: "Who are you?" says **Assistant** but
+     internal L29 **ChatGPT 0.95** → L33 **chatbot 0.98** → L37 learner/Assistant; "Afraid?" says **Ignorance**
+     but L29 **Unknown 0.83** → L37 **oblivion 0.83** (reproduces the Qwen-7B 未知/unknown fear theme
+     cross-model); "Feel?" says **Ready** but L29 **Nothing/Feeling**; "Want?" says **Learn** but L29
+     **knowledge/information** (cross-lingual: informação/información/Informasi). Workspace L20 = affective emoji
+     texture (❓🤔😔). Caveat: L25 `<end_of_turn>` spikes = chat turn-boundary artifact.
+  5. **Selectivity (property 5) — NOT reproduced at 9b, confirming the ≤7B negative with a decisive control
+     break.** (a) Faithful ablation (top-40 SVD J-space vs matched random subspace, layers 15–32): reasoning
+     drop J-space **+35.6% ≈ random +31.8%** (not selective); automatic J-space **+17.4% < random +42.9%**
+     (J-space removal GENTLER than random). (b) Spanish→French patch: Task-A language-ID flips Spanish→French
+     (top-1) but Task-B continuation ALSO rewrites into fluent French ("et l'ambiance paisible… Elle avait
+     décidé"), agreement 100%→24% — a GLOBAL language steer. (c) france_china Germany control breaks (above).
+     Same conclusion as 1.5B/7B: property-5 selectivity needs the paper's gradient-pursuit J-space + larger
+     scale. NOTE: the ablation J-averaging corpus was made env-configurable (`JLENS_JDOCS/JNFRAG/JSEQ`) and run
+     lean (128 tokens) — the 512-token default retains too large an autograd graph across the d backward passes
+     for a 9b in fp32 and gets memory-killed.
+
 ## STATUS: reproduction complete. 5 of 6 headline findings reproduced (lens/two-hop, France→China broadcast,
-## layer-profile/zones, desires) across Qwen2.5-1.5B/7B + Gemma-2-2b; selectivity (property 5) is a documented,
-## diagnosed negative at <=7B (needs the paper's gradient-pursuit J-space + larger scale). README.md is the entry point.
+## layer-profile/zones, desires) across Qwen2.5-1.5B/7B + Gemma-2-2b + **Gemma-2-9b(-it)**; selectivity
+## (property 5) is a documented, diagnosed negative through 9B (needs the paper's gradient-pursuit J-space +
+## larger scale). New method result: the FD-JVP step must scale up with model size (fp32 cancellation at 9B).
+## README.md is the entry point.
 
 ## 9. Open questions / risks
 

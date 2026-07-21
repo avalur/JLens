@@ -22,7 +22,8 @@ from jlens.corpus import wiki_texts, stream_batches  # noqa: E402
 
 NAME = os.environ.get("JLENS_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 DEV = os.environ.get("JLENS_DEVICE", "mps")
-EPS = 1e-2
+# FD-JVP step; large models need a larger step to avoid fp32 cancellation (JLENS_EPS=0.1 for 9b).
+EPS = float(os.environ.get("JLENS_EPS", "1e-2"))
 NFRAG = int(os.environ.get("JLENS_NFRAG", "96"))
 SEQ = int(os.environ.get("JLENS_SEQ", "64"))
 DEPTHS = [0.5, 0.6, 0.7, 0.8, 0.9]  # workspace->motor layers to read

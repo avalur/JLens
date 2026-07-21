@@ -30,6 +30,11 @@ K = int(os.environ.get("JLENS_K", "40"))                 # J-space dims to ablat
 BAND = (float(os.environ.get("JLENS_D0", "0.35")),
         float(os.environ.get("JLENS_D1", "0.80")))        # workspace depth band to ablate
 JSPACE = os.environ.get("JLENS_JSPACE", "svd")           # "svd" (top sing. vecs of J_l) | "concept"
+# J-averaging corpus size. Default 120/16/32 (=512 tokens) suits small models; large models retain the
+# forward graph across d backward passes, so shrink this for a 9b (e.g. 8/16 = 128 tokens) to fit memory.
+J_DOCS = int(os.environ.get("JLENS_JDOCS", "120"))
+J_NFRAG = int(os.environ.get("JLENS_JNFRAG", "16"))
+J_SEQ = int(os.environ.get("JLENS_JSEQ", "32"))
 
 # Concept dictionary for the "concept" J-space: dominant directions of the J-vectors of these words.
 CONCEPTS = (
@@ -71,8 +76,8 @@ if os.path.exists(cache):
     print(f"loading cached Jacobian {cache}", flush=True)
     J = torch.load(cache)
 else:
-    avg = torch.cat(stream_batches(lm.tokenizer, wiki_texts(120), n_frag=16, seq_len=32,
-                                   micro_bs=16, device=DEV), dim=0)  # one [16,32] batch
+    avg = torch.cat(stream_batches(lm.tokenizer, wiki_texts(J_DOCS), n_frag=J_NFRAG, seq_len=J_SEQ,
+                                   micro_bs=16, device=DEV), dim=0)  # one [J_NFRAG, J_SEQ] batch
     print(f"computing full Jacobian over {avg.shape} ({d} backward passes) ...", flush=True)
     J, _, _ = compute_jacobian(lm, [avg], rows=None, layers=None, normalize=True, verbose=True)
     torch.save(J, cache)

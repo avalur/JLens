@@ -25,7 +25,9 @@ from jlens.lens import top_tokens  # noqa: E402
 NAME = os.environ.get("JLENS_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 DEV = os.environ.get("JLENS_DEVICE", "mps")
 ALPHAS = [float(a) for a in os.environ.get("JLENS_ALPHAS", "0,2,3,4,6,8").split(",")]
-PATCH_LAYERS = list(range(9, 20))
+# Default 9-19 suits ~28-layer models; override via JLENS_PATCH_LAYERS for deeper models (e.g. 9b).
+_pl = os.environ.get("JLENS_PATCH_LAYERS", "").strip()
+PATCH_LAYERS = [int(x) for x in _pl.split(",")] if _pl else list(range(9, 20))
 NGEN = 20
 
 SPANISH = ("El sol brillaba sobre las montañas mientras los pájaros cantaban en los "

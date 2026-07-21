@@ -25,7 +25,9 @@ from jlens.lens import top_tokens  # noqa: E402
 
 NAME = os.environ.get("JLENS_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 DEV = os.environ.get("JLENS_DEVICE", "mps")
-EPS = 1e-2
+# Central-difference step for the FD-JVP. 1e-2 suits small models; large models (bigger h_L
+# magnitudes) need a larger step to avoid fp32 cancellation -- pass JLENS_EPS=0.1 for Gemma-2-9b.
+EPS = float(os.environ.get("JLENS_EPS", "1e-2"))
 
 PROMPT = "The capital of the country where the Eiffel Tower is located is the city of"
 

@@ -50,7 +50,10 @@ CORPUS = [
 NAME = os.environ.get("JLENS_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 DEV = os.environ.get("JLENS_DEVICE", "mps")
 ALPHAS = [float(a) for a in os.environ.get("JLENS_ALPHAS", "1,2,4").split(",")]
-PATCH_LAYERS = list(range(9, 20))
+# Mid-network patch band. Default 9-19 is calibrated for ~28-layer models; override via
+# JLENS_PATCH_LAYERS (comma-separated) to depth-scale for deeper models (e.g. 42-layer Gemma-2-9b).
+_pl = os.environ.get("JLENS_PATCH_LAYERS", "").strip()
+PATCH_LAYERS = [int(x) for x in _pl.split(",")] if _pl else list(range(9, 20))
 
 PROBES = [
     ("capital",           "The capital of France is",                  "Paris",  "Beijing"),

@@ -114,12 +114,15 @@ def finite_difference_check(lm, ids, layer=None, n_rows=16, eps=1e-2):
     }
 
 
-def run_all(lm, ids, verbose=True):
+def run_all(lm, ids, verbose=True, fd_eps=1e-2):
+    # fd_eps: central-difference step for the FD-JVP check. 1e-2 suits small models; larger
+    # models (bigger residual/h_L magnitudes) need a larger step to avoid fp32 cancellation
+    # (e.g. Gemma-2-9b is cancellation-dominated at 1e-2 but ~0.5% at 1e-1).
     results = {
         "structural": structural_check(lm, ids),
         "jlens_identity": jlens_identity_check(lm, ids),
         "j_last_identity": j_last_identity_check(lm, ids),
-        "finite_difference": finite_difference_check(lm, ids),
+        "finite_difference": finite_difference_check(lm, ids, eps=fd_eps),
     }
     if verbose:
         for name, r in results.items():

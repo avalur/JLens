@@ -38,7 +38,8 @@ else:
 print(f"  validation seq: {lm.tokenizer.decode(ids[0])!r} (S={ids.shape[1]})\n", flush=True)
 
 t1 = time.time()
-all_ok, _ = validate.run_all(lm, ids, verbose=True)
+FD_EPS = float(os.environ.get("JLENS_FD_EPS", "1e-2"))  # bump for large models (see run_all)
+all_ok, _ = validate.run_all(lm, ids, verbose=True, fd_eps=FD_EPS)
 print(f"\nvalidation took {time.time() - t1:.1f}s")
 print("ALL PASS" if all_ok else "SOME CHECKS FAILED")
 sys.exit(0 if all_ok else 1)
