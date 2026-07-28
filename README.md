@@ -83,6 +83,10 @@ scripts/
   ablation_active.py      # faithful per-input active-J-space ablation during generation (+ random control)
   ablation.py             # builds/caches the full Jacobian; initial static-subspace ablation exploration
   language_selectivity.py # Spanish→French language patch on two tasks
+figures/
+  data/            # per-figure data extracted from the script runs (JSON)
+  jlens_style.py   # shared theme (validated CVD-safe palette, light + dark)
+  plot_eiffel.py   # renders the Eiffel figures  ->  python figures/plot_eiffel.py
 PLAN.md          # full technical build log + per-experiment findings (chronological)
 ```
 
@@ -108,6 +112,17 @@ tables in `PLAN.md`.
 ### ✅ 2. Eiffel two-hop — J-lens sees the answer mid-network, the logit lens can't
 Prompt: *"…the capital of the country where the Eiffel Tower is located is the city of"* → Paris. Rank of
 Paris over the full vocabulary, by layer:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/eiffel_ranks_dark.png">
+  <img alt="Full-vocab rank of Paris by layer: the J-lens (blue) rides the top-100 band through the middle layers on all four models, while the logit lens (orange) stays at rank thousands–hundred-thousands until a late cliff." src="figures/eiffel_ranks_light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/eiffel_headstart_dark.png">
+  <img alt="Dumbbell: relative depth at which each lens first ranks Paris in the top-100. J-lens leads by 12–26 layers across models." src="figures/eiffel_headstart_light.png">
+</picture>
+
 
 | | J-lens finds Paris | Logit lens is still noise until |
 |---|---|---|
