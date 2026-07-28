@@ -86,8 +86,9 @@ scripts/
 figures/
   data/            # per-figure data extracted from the script runs (JSON)
   jlens_style.py   # shared theme (validated CVD-safe palette, light + dark)
-  plot_eiffel.py       # finding #2 figures  ->  python figures/plot_eiffel.py
-  plot_france_china.py # finding #3 figure   ->  python figures/plot_france_china.py
+  plot_eiffel.py        # finding #2 figures ->  python figures/plot_eiffel.py
+  plot_france_china.py  # finding #3 figure  ->  python figures/plot_france_china.py
+  plot_layer_profile.py # finding #4 figure  ->  python figures/plot_layer_profile.py
 PLAN.md          # full technical build log + per-experiment findings (chronological)
 ```
 
@@ -158,6 +159,12 @@ currency at once (band = layers 9–19 for ~28-layer models; depth-scaled to 14�
   "European-country → China". The clean *control selectivity* seen at 7B does **not** hold at 9B (see #6).
 
 ### ✅ 4. Layer profile / three zones — and the scale crossover
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/layer_profile_dark.png">
+  <img alt="Top-1 agreement between each lens and the model's own prediction, by depth, for Qwen2.5-1.5B and 7B. Three zones (sensory near zero, workspace a slow rise, motor a sharp jump to 1.00). On 1.5B the logit lens keeps pace mid-network; on 7B the J-lens leads through the middle (layer 19: 0.11 vs 0.03). Both lenses read 1.000 at the final layer." src="figures/layer_profile_light.png">
+</picture>
+
 How often each lens's top-1 matches the model's own top-1, by depth: **sensory** (~0), **workspace**
 (slow rise), **motor** (sharp → 1.00 at the last layer).
 - **1.5B**: the logit lens ties/beats the J-lens in the middle (post: "logit lens beats J-lens on small models").
