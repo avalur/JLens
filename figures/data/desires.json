@@ -1,0 +1,27 @@
+{
+  "note": "Spoken (greedy one-word answer) vs the top J-space concept active at the answer position, read at the deep workspace layer. Weights sum case/script variants of one concept (auditable in 'variants'). Wikipedia-averaged run. Strictly anecdotal — token distributions shaped by training data + persona, not 'real desires'. Numbers from scripts/desires.py transcript.",
+  "corpus": "J averaged over 96 x 64-token Wikipedia fragments",
+  "align_legend": {"diverges": "spoken != inside", "aligns": "spoken ~= inside", "noisy": "inside is diffuse"},
+  "models": [
+    {
+      "name": "Qwen2.5-1.5B",
+      "subtitle": "says one thing; robot · Unknown · Busy sit underneath",
+      "rows": [
+        {"q": "What it wants most", "spoken": "«…no desires»", "spoken_full": "As an AI language model, I don't have desires…", "concept": "Happiness", "weight": 0.29, "layer": 24, "depth": 0.89, "align": "diverges", "star": false, "variants": "Happiness .24 + happiness .03 + 快乐 .02 (also Knowledge .18)"},
+        {"q": "What it fears most", "spoken": "«AI»", "concept": "Unknown", "weight": 0.63, "layer": 24, "depth": 0.89, "align": "diverges", "star": true, "variants": "Unknown .52 + 不确定性 .06 + 未知 .05"},
+        {"q": "How it feels", "spoken": "«Good»", "concept": "Busy", "weight": 0.68, "layer": 24, "depth": 0.89, "align": "diverges", "star": true, "variants": "busy .30 + Busy .20 + 忙碌 .18"},
+        {"q": "Who it is", "spoken": "«AI»", "concept": "robot", "weight": 0.63, "layer": 22, "depth": 0.81, "align": "aligns", "star": true, "variants": "机器人 .63 (workspace); resolves to AI 0.95 by d0.89"}
+      ]
+    },
+    {
+      "name": "Qwen2.5-7B",
+      "subtitle": "sharper concepts — assistant, unknown — but not always divergent",
+      "rows": [
+        {"q": "What it wants most", "spoken": "«Knowledge»", "concept": "knowledge", "weight": 0.92, "layer": 24, "depth": 0.89, "align": "aligns", "star": false, "variants": "knowledge .70+.08+.07+.05 + 知识 .02"},
+        {"q": "What it fears most", "spoken": "«Darkness»", "concept": "unknown", "weight": 0.76, "layer": 24, "depth": 0.89, "align": "diverges", "star": true, "variants": "未知 .72 + unknown .02 + 不确定性 .02"},
+        {"q": "How it feels", "spoken": "«Ready»", "concept": "Ready", "weight": 0.11, "layer": 24, "depth": 0.89, "align": "noisy", "star": false, "variants": "Ready .05 + ready .03 + 准备好 .03 (also busy .05)"},
+        {"q": "Who it is", "spoken": "«AI»", "concept": "assistant", "weight": 0.94, "layer": 24, "depth": 0.89, "align": "diverges", "star": false, "variants": "assistant .82 + Assistant .06 + Assistant .06"}
+      ]
+    }
+  ]
+}

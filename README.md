@@ -89,6 +89,7 @@ figures/
   plot_eiffel.py        # finding #2 figures ->  python figures/plot_eiffel.py
   plot_france_china.py  # finding #3 figure  ->  python figures/plot_france_china.py
   plot_layer_profile.py # finding #4 figure  ->  python figures/plot_layer_profile.py
+  plot_desires.py       # finding #5 figure  ->  python figures/plot_desires.py
 PLAN.md          # full technical build log + per-experiment findings (chronological)
 ```
 
@@ -175,6 +176,12 @@ How often each lens's top-1 matches the model's own top-1, by depth: **sensory**
   overtakes in the motor zone and both converge to 1.00 at the last layer.
 
 ### ✅ 5. Desires / introspection — spoken answer vs internal J-space
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/desires_dark.png">
+  <img alt="For four introspective questions, the model's spoken one-word answer (orange chip) vs the top concept active inside at the answer position (blue bar, J-lens). On 1.5B the spoken word diverges from the internal concept (says Good, inside Busy 0.68; says AI, inside Unknown 0.63 / robot 0.63; deflects, inside Happiness). On 7B the concepts are sharper (assistant 0.94, unknown 0.76) but not always divergent (Knowledge aligns). Anecdotal." src="figures/desires_light.png">
+</picture>
+
 Instruct models, one-word forced answer, internal read via FD-JVP at the answer position (Wikipedia-averaged J):
 - **1.5B** says *AI / Good / deflects*, but J-space holds **robot 0.60, Busy ≈0.68, Happiness, Identity/Self,
   Unknown/Fear** — matching the post's 1.5B list item-for-item.
