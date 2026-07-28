@@ -86,7 +86,8 @@ scripts/
 figures/
   data/            # per-figure data extracted from the script runs (JSON)
   jlens_style.py   # shared theme (validated CVD-safe palette, light + dark)
-  plot_eiffel.py   # renders the Eiffel figures  ->  python figures/plot_eiffel.py
+  plot_eiffel.py       # finding #2 figures  ->  python figures/plot_eiffel.py
+  plot_france_china.py # finding #3 figure   ->  python figures/plot_france_china.py
 PLAN.md          # full technical build log + per-experiment findings (chronological)
 ```
 
@@ -139,6 +140,12 @@ Bonus details reproduced: a mid-network `city/Rome/Venice/Italy` geography clust
 layers ("thinks in English/Chinese"), and the `____` "exam-habit" fill-in tokens.
 
 ### ✅ 3. France→China broadcast — one swap redirects many facts
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/france_china_dark.png">
+  <img alt="One France→China J-vector swap: the European answer (grey) gives way to the China-consistent answer (blue) across capital, language, continent, currency. The Germany control leaks Beijing on 1.5B (control breaks) but stays out on 7B (control holds)." src="figures/france_china_light.png">
+</picture>
+
 Patching the `France`→`China` J-vector on the mid-network band flips capital, language, continent, *and*
 currency at once (band = layers 9–19 for ~28-layer models; depth-scaled to 14–29 for 42-layer Gemma-2-9b):
 - **1.5B**: Europe 0.70 → **Asia 0.70**, French → **Chinese 0.39**, Euro → **Renminbi**, capital → Beijing.

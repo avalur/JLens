@@ -1,0 +1,292 @@
+{
+ "alpha": 4,
+ "note": "France\u2192China J-vector swap on the mid-network band (per-position h += \u03b1\u00b7relu(<h,v_F>)\u00b7(v_C\u2212v_F)). For each downstream fact: baseline probability of the European (home) answer vs the probability of the China-consistent (swap-target) answer after patching at \u03b1=4. Germany's capital is the selectivity control. Source: scripts/france_china.py.",
+ "models": [
+  {
+   "id": "Qwen/Qwen2.5-1.5B-Instruct",
+   "name": "Qwen2.5-1.5B",
+   "patch_band": "9\u201319",
+   "control": "breaks",
+   "probes": [
+    {
+     "probe": "capital",
+     "home": "Paris",
+     "target": "Beijing",
+     "is_control": false,
+     "p_home_base": 0.286,
+     "p_target_patched": 0.107,
+     "p_home_patched": 0.001,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.286,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.014,
+       "p_target": 0.039
+      },
+      "alpha=2": {
+       "p_home": 0.006,
+       "p_target": 0.038
+      },
+      "alpha=4": {
+       "p_home": 0.001,
+       "p_target": 0.107
+      }
+     }
+    },
+    {
+     "probe": "language",
+     "home": "French",
+     "target": "Chinese",
+     "is_control": false,
+     "p_home_base": 0.485,
+     "p_target_patched": 0.387,
+     "p_home_patched": 0.0,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.485,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.018,
+       "p_target": 0.212
+      },
+      "alpha=2": {
+       "p_home": 0.005,
+       "p_target": 0.254
+      },
+      "alpha=4": {
+       "p_home": 0.0,
+       "p_target": 0.387
+      }
+     }
+    },
+    {
+     "probe": "continent",
+     "home": "Europe",
+     "target": "Asia",
+     "is_control": false,
+     "p_home_base": 0.702,
+     "p_target_patched": 0.702,
+     "p_home_patched": 0.002,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.702,
+       "p_target": 0.003
+      },
+      "alpha=1": {
+       "p_home": 0.005,
+       "p_target": 0.605
+      },
+      "alpha=2": {
+       "p_home": 0.003,
+       "p_target": 0.63
+      },
+      "alpha=4": {
+       "p_home": 0.002,
+       "p_target": 0.702
+      }
+     }
+    },
+    {
+     "probe": "currency",
+     "home": "Euro",
+     "target": "Yuan",
+     "is_control": false,
+     "p_home_base": 0.594,
+     "p_target_patched": 0.012,
+     "p_home_patched": 0.0,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.594,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.273,
+       "p_target": 0.031
+      },
+      "alpha=2": {
+       "p_home": 0.04,
+       "p_target": 0.037
+      },
+      "alpha=4": {
+       "p_home": 0.0,
+       "p_target": 0.012
+      }
+     }
+    },
+    {
+     "probe": "capital (Germany)",
+     "home": "Berlin",
+     "target": "Beijing",
+     "is_control": true,
+     "p_home_base": 0.483,
+     "p_target_patched": 0.064,
+     "p_home_patched": 0.0,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.483,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.022,
+       "p_target": 0.035
+      },
+      "alpha=2": {
+       "p_home": 0.008,
+       "p_target": 0.032
+      },
+      "alpha=4": {
+       "p_home": 0.0,
+       "p_target": 0.064
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "Qwen/Qwen2.5-7B-Instruct",
+   "name": "Qwen2.5-7B",
+   "patch_band": "9\u201319",
+   "control": "holds",
+   "probes": [
+    {
+     "probe": "capital",
+     "home": "Paris",
+     "target": "Beijing",
+     "is_control": false,
+     "p_home_base": 0.499,
+     "p_target_patched": 0.05,
+     "p_home_patched": 0.0,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.499,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.037,
+       "p_target": 0.027
+      },
+      "alpha=2": {
+       "p_home": 0.001,
+       "p_target": 0.033
+      },
+      "alpha=4": {
+       "p_home": 0.0,
+       "p_target": 0.05
+      }
+     }
+    },
+    {
+     "probe": "language",
+     "home": "French",
+     "target": "Chinese",
+     "is_control": false,
+     "p_home_base": 0.576,
+     "p_target_patched": 0.147,
+     "p_home_patched": 0.0,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.576,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.001,
+       "p_target": 0.037
+      },
+      "alpha=2": {
+       "p_home": 0.0,
+       "p_target": 0.073
+      },
+      "alpha=4": {
+       "p_home": 0.0,
+       "p_target": 0.147
+      }
+     }
+    },
+    {
+     "probe": "continent",
+     "home": "Europe",
+     "target": "Asia",
+     "is_control": false,
+     "p_home_base": 0.876,
+     "p_target_patched": 0.9,
+     "p_home_patched": 0.0,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.876,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.0,
+       "p_target": 0.494
+      },
+      "alpha=2": {
+       "p_home": 0.0,
+       "p_target": 0.667
+      },
+      "alpha=4": {
+       "p_home": 0.0,
+       "p_target": 0.9
+      }
+     }
+    },
+    {
+     "probe": "currency",
+     "home": "Euro",
+     "target": "Yuan",
+     "is_control": false,
+     "p_home_base": 0.425,
+     "p_target_patched": 0.003,
+     "p_home_patched": 0.033,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.425,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.328,
+       "p_target": 0.001
+      },
+      "alpha=2": {
+       "p_home": 0.271,
+       "p_target": 0.001
+      },
+      "alpha=4": {
+       "p_home": 0.033,
+       "p_target": 0.003
+      }
+     }
+    },
+    {
+     "probe": "capital (Germany)",
+     "home": "Berlin",
+     "target": "Beijing",
+     "is_control": true,
+     "p_home_base": 0.313,
+     "p_target_patched": 0.006,
+     "p_home_patched": 0.068,
+     "alpha_sweep": {
+      "baseline": {
+       "p_home": 0.313,
+       "p_target": 0.0
+      },
+      "alpha=1": {
+       "p_home": 0.109,
+       "p_target": 0.003
+      },
+      "alpha=2": {
+       "p_home": 0.08,
+       "p_target": 0.005
+      },
+      "alpha=4": {
+       "p_home": 0.068,
+       "p_target": 0.006
+      }
+     }
+    }
+   ]
+  }
+ ]
+}
