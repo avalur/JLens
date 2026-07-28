@@ -28,10 +28,12 @@ ALPHA = DATA["alpha"]
 
 def fig_broadcast(dark):
     cc = apply_theme(dark)
-    before_c = cc("muted")         # neutral reference (mode-invariant grey, reads on both surfaces)
-    after_c = cc("jlens")          # blue: China-consistent answer induced
-    fig, axes = plt.subplots(1, 2, figsize=(12.4, 5.9), sharex=True, sharey=True)
-    H = 0.36                        # bar half-group height
+    home_before_c = cc("muted")    # neutral grey: European answer, before patch
+    home_after_c = cc("logit")     # orange: same European answer, after patch (did it survive?)
+    swap_after_c = cc("jlens")     # blue: China-consistent answer, after patch
+    fig, axes = plt.subplots(1, 2, figsize=(12.4, 6.4), sharex=True, sharey=True)
+    bh = 0.24                       # single-bar height
+    OFF = 0.27                      # vertical offset of the 3 bars within a row
 
     for ax, m in zip(axes, MODELS):
         probes = m["probes"]
@@ -41,19 +43,19 @@ def fig_broadcast(dark):
             ctl = p["is_control"]
             if ctl:
                 ax.axhspan(y - 0.5, y + 0.5, color=cc("muted"), alpha=0.10, lw=0, zorder=0)
-            ax.barh(y + H / 2, p["p_home_base"], height=H, color=before_c,
-                    zorder=3, label="_", alpha=0.9)
-            ax.barh(y - H / 2, p["p_target_patched"], height=H, color=after_c, zorder=3)
-            # direct label on the "after" bar: what answer + how strong
-            v = p["p_target_patched"]
-            ax.annotate(f"{p['target']}  {v:.2f}", xy=(v, y - H / 2),
-                        xytext=(6, 0), textcoords="offset points", va="center",
-                        ha="left", fontsize=8.5, color=cc("ink2"),
-                        fontweight="bold" if not ctl else "bold")
-            # faint label on the "before" bar
-            ax.annotate(f"{p['home']} {p['p_home_base']:.2f}", xy=(p["p_home_base"], y + H / 2),
-                        xytext=(6, 0), textcoords="offset points", va="center",
-                        ha="left", fontsize=8, color=cc("muted"))
+            hb, ha, sa = p["p_home_base"], p["p_home_patched"], p["p_target_patched"]
+            ax.barh(y + OFF, hb, height=bh, color=home_before_c, zorder=3)
+            ax.barh(y, ha, height=bh, color=home_after_c, zorder=3)
+            ax.barh(y - OFF, sa, height=bh, color=swap_after_c, zorder=3)
+
+            def lab(val, yy, text, color, weight="normal"):
+                ax.annotate(text, xy=(val, yy), xytext=(6, 0), textcoords="offset points",
+                            va="center", ha="left", fontsize=8.3, color=color, fontweight=weight)
+            lab(hb, y + OFF, f"{p['home']} {hb:.2f}", cc("muted"))
+            # home-after: always shown on the control (that IS the break); elsewhere only if visible
+            if ctl or ha >= 0.02:
+                lab(ha, y, f"{p['home']} {ha:.2f}", cc("ink2"))
+            lab(sa, y - OFF, f"{p['target']} {sa:.2f}", cc("ink2"), "bold")
 
         # divider above the control row
         ax.axhline(0.5, color=cc("axis"), lw=1.0, ls=(0, (3, 3)), zorder=1)
@@ -84,23 +86,24 @@ def fig_broadcast(dark):
                     ha="right", va="bottom", fontsize=9, color=cc("muted"))
 
     handles = [
-        PatchHandle(facecolor=before_c, label="before — European answer"),
-        PatchHandle(facecolor=after_c, label=f"after swap (α={ALPHA}) — China-consistent answer"),
+        PatchHandle(facecolor=home_before_c, label="European answer — before patch"),
+        PatchHandle(facecolor=home_after_c, label="European answer — after patch"),
+        PatchHandle(facecolor=swap_after_c, label="China-consistent answer — after patch"),
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 0.885),
-               fontsize=10, labelcolor=cc("ink2"), handlelength=1.4, columnspacing=2.2)
+    fig.legend(handles=handles, loc="upper center", ncol=3, bbox_to_anchor=(0.5, 0.895),
+               fontsize=9.5, labelcolor=cc("ink2"), handlelength=1.4, columnspacing=1.8)
 
     fig.suptitle("One France→China swap redirects the whole country — and selectivity arrives with scale",
                  fontsize=15, fontweight="bold", x=0.012, ha="left", y=0.985, color=cc("ink"))
-    fig.text(0.012, 0.925,
+    fig.text(0.012, 0.935,
              "Swap the France and China J-vectors on the mid-network band; read four downstream facts + a Germany control.",
              fontsize=10.5, color=cc("ink2"), ha="left")
     fig.text(0.012, 0.015,
-             "The shaded row is the selectivity control (Germany’s capital). On 1.5B, “Beijing” leaks into it (0.06) — the patch "
-             "is a sledgehammer; on 7B it stays out (0.01).   Source: scripts/france_china.py",
+             "Bars per fact: European answer before → after the swap → the China-consistent answer it becomes.  Shaded row = "
+             "Germany control.   α=4 · source: scripts/france_china.py",
              fontsize=8, color=cc("muted"), ha="left")
 
-    fig.subplots_adjust(left=0.13, right=0.985, top=0.72, bottom=0.115, wspace=0.36)
+    fig.subplots_adjust(left=0.13, right=0.985, top=0.73, bottom=0.115, wspace=0.36)
     return fig
 
 
